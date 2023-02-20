@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/css/bootstrap.min.css"
+      crossorigin="anonymous"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  </head>
+  <body style="background-color: mediumspringgreen">
+    <div class="container-lg bg-white p-3">
+      <h1 class="text-center">Add NTU courses to Google Calendar</h1>
+      <div class="m-3">
+        <label for="first-date" class="row form-label"
+          >1. Select the first date of the semester.</label
+        >
+        <input
+          class="form-control"
+          type="date"
+          id="first-date"
+          name="first-date"
+          value="2022-09-05"
+        />
+      </div>
+      <div class="m-3">
+        <label for="weeks" class="row form-label"
+          >2. Input the number of weeks in the semester.</label
+        >
+        <input
+          class="form-control"
+          type="number"
+          id="weeks"
+          name="weeks"
+          value="16"
+        />
+      </div>
+      <div class="m-3">
+        <label for="calendar-id" class="row form-label">
+          3. If you don't want to add the events into th default calendar, input
+          the calendar ID (optional).
+        </label>
+        <input
+          class="form-control"
+          type="text"
+          id="calendar-id"
+          name="calendar-id"
+          value=""
+        />
+      </div>
+      <div class="m-3">
+        <label class="row form-label">
+          4. Copy your planed class schedule from<a
+            target="_blank"
+            class="d-inline"
+            href="https://nol.ntu.edu.tw/nol/coursesearch/myschedule.php"
+            >NTU online course</a
+          >
+          to the text area below.
+        </label>
+
+        <textarea class="rich form-control" rows="10"></textarea>
+      </div>
+      <div>Find the links at the right of your class schedule.</div>
+      <div class="m-3" id="schedule"></div>
+    </div>
+  </body>
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.1/dist/js/bootstrap.bundle.min.js"
+    crossorigin="anonymous"
+  ></script>
+  <script>
+    /**
+     * Get course name and the information link from the row of the course table.
+     *
+     * @param {HTMLElement} row
+     * @returns {[String, String]}
+     */
+    function getCourseNameAndLinkFromRow(row) {
+      /* assume the first link in the row is the course name */
+      const courseNameElm = row.getElementsByTagName("a")[0];
+      const url = new URL(courseNameElm.href);
+      const keys = Array.from(url.searchParams.keys());
+      keys.forEach((key) => {
+        if (!["course_id", "semester", "lang"].includes(key)) {
+          url.searchParams.delete(key);
+        }
+      });
+      return [courseNameElm.innerText, url.href];
+    }
+
+    /**
+     * Get the link of COOL platform from the row of the course table.
+     *
+     * @param {HTMLElement} row
+     * @returns {String=}
+     */
+    function getCoolLink(row) {
+      return row.querySelector('a[href*="cool.ntu.edu.tw"]')?.href;
+    }
+
+    /**
+     * Parse the locations and time from the row of the course table.
+     *
+     * @param {HTMLElement} row
+     * @returns {[String, String[], String][]}
+     */
+    function getLocationAndTime(row) {
+      const timeAndLocationPattern =
+        /([一二三四五六日])(([0-9]|10|[A-D])(,([0-9]|10|[A-D]))*)\((.+?)\)/g;
+      if (this.locationTimeIdx == null) {
+        this.locationTimeIdx = -1;
+        Array.from(row.getElementsByTagName("td")).some((elm) => {
+          locationTimeIdx += 1;
+          const istimeAndLocation = timeAndLocationPattern.test(elm.innerText);
+          timeAndLocationPattern.lastIndex = 0;
+          return istimeAndLocation;
+        });
+      }
+      return [
+        ...row
+          .getElementsByTagName("td")
+          [this.locationTimeIdx].innerText.matchAll(timeAndLocationPattern),
+      ].map((res) => [res[1], res[2].split(","), res[6]]);
+    }
+
+    /**
+     * Convert the orders of the class to numbers.
+     * E.g. "1" => 1, "A" => 11
+     *
+     * @param {String[]} classNo
+     * @returns {Number[]}
+     */
+    function parseClassNo(classNo) {
+      const parsedClassNo = classNo.map((c) => {
+        if (/^[ABCD]$/.test(c)) {
+          return c.charCodeAt(0) - "A".charCodeAt(0) + 11;
+        }
+        return parseInt(c);
+      });
+      for (let i = 1; i < parsedClassNo.length; ++i) {
+        if (parsedClassNo[i] !== parsedClassNo[i - 1] + 1) {
+          throw new Error(
+            `Class No. are not strictly increasing: [${parsedClassNo}]`
+          );
+        }
+      }
+      return parsedClassNo;
+    }
+
+    /**
+     * Compose Google Calendar Event link from the information of the course.
+     *
+     * @param {Date} firstDate
+     * @param {Number} weeksInSemester
+     * @param {String} courseName
+     * @param {String} link
+     * @param {String=} coolLink
+     * @param {[String, String[], String][]} locationAndTimePairs
+     * @param {String=} calendarID
+     * @returns {URL[]}
+     */
+    function composeUrl(
+      firstDate,
+      weeksInSemester,
+      courseName,
+      link,
+      coolLink,
+      locationAndTimePairs,
+      calendarID
+    ) {
+      const firstDay = firstDate.getDay();
+      const dayOffsetMap = {
+        日: (7 - firstDay) % 7,
+        一: (8 - firstDay) % 7,
+        二: (9 - firstDay) % 7,
+        三: (10 - firstDay) % 7,
+        四: (11 - firstDay) % 7,
+        五: (12 - firstDay) % 7,
+        六: (13 - firstDay) % 7,
+      };
+      return locationAndTimePairs.map(([weekDay, classNo, location]) => {
+        const setToStartOfClass = (dateObj, classNoIdx) => {
+          const classStartTimeTable = [
+            [7, 10],
+            [8, 10],
+            [9, 10],
+            [10, 20],
+            [11, 20],
+            [12, 20],
+            [13, 20],
+            [14, 20],
+            [15, 30],
+            [16, 30],
+            [17, 30],
+            [18, 25],
+            [19, 20],
+            [20, 15],
+            [21, 00],
+          ];
+          dateObj.setHours(classStartTimeTable[classNoIdx][0]);
+          dateObj.setMinutes(classStartTimeTable[classNoIdx][1]);
+        };
+        const parsedClassNo = parseClassNo(classNo);
+        const classStartTime = new Date(firstDate);
+        classStartTime.setDate(
+          classStartTime.getDate() + dayOffsetMap[weekDay]
+        );
+        setToStartOfClass(classStartTime, parsedClassNo[0]);
+        const classEndTime = new Date(classStartTime);
+        setToStartOfClass(
+          classEndTime,
+          parsedClassNo[parsedClassNo.length - 1]
+        );
+        classEndTime.setMinutes(classEndTime.getMinutes() + 50);
+
+        const url = new URL(
+          "https://www.google.com/calendar/event?action=TEMPLATE"
+        );
+        url.searchParams.set("text", courseName);
+        const toGoogleCalendarDateString = (time) => {
+          const year = time.getUTCFullYear();
+          const month = `${time.getUTCMonth() + 1}`.padStart(2, "0");
+          const date = `${time.getUTCDate()}`.padStart(2, "0");
+          const hour = `${time.getUTCHours()}`.padStart(2, "0");
+          const minute = `${time.getUTCMinutes()}`.padStart(2, "0");
+          return `${year}${month}${date}T${hour}${minute}00Z`;
+        };
+        url.searchParams.set(
+          "dates",
+          `${toGoogleCalendarDateString(
+            classStartTime
+          )}/${toGoogleCalendarDateString(classEndTime)}`
+        );
+        url.searchParams.set("location", location);
+        let description = link;
+        if (coolLink != null) {
+          description += `\n\ncool: ${coolLink}`;
+        }
+        url.searchParams.set("details", description);
+        url.searchParams.set(
+          "recur",
+          `RRULE:FREQ=WEEKLY;COUNT=${weeksInSemester}`
+        );
+        if (calendarID !== null) {
+          url.searchParams.set("src", calendarID);
+        }
+        return url;
+      });
+    }
+
+    /**
+     * @param {String} html representing a single element
+     * @return {Element}
+     */
+    function htmlToElement(html) {
+      const template = document.createElement("template");
+      html =
+        html.trim(); /* Never return a text node of whitespace as the result */
+      template.innerHTML = html;
+      return template.content.firstChild;
+    }
+
+    const target = document.querySelector("textarea.rich");
+    target.addEventListener("paste", (event) => {
+      const clipboard_data = event.clipboardData || window.clipboardData;
+      const html_paste_content = clipboard_data.getData("text/html");
+      // This is the raw HTML that can be used to make "rich" content
+      console.debug(html_paste_content);
+
+      const firstDateCompoments = document
+        .getElementById("first-date")
+        .value.split("-");
+      firstDateCompoments[1] -= 1;
+      const firstDate = new Date(...firstDateCompoments);
+      const calendarID = document.getElementById("calendar-id").value;
+      const weeksInSemester = Number(document.getElementById("weeks").value);
+
+      document.getElementById("schedule").innerHTML = html_paste_content;
+      const table = document.getElementById("schedule");
+      console.log(table);
+      let rows = table.getElementsByTagName("tr");
+
+      /* Update header */
+      const header = rows[0];
+      const addToGoogleCalendarCell = `
+        <td>
+          加到
+          <br>
+          Google
+          <br>
+          日曆
+        </td>
+        `;
+      header.insertBefore(
+        htmlToElement(addToGoogleCalendarCell),
+        header.children[header.children.length - 1]
+      );
+
+      /* Update foot */
+      const foot = rows[rows.length - 1];
+      const footCell = foot.getElementsByTagName("td")[0];
+      footCell.setAttribute("colspan", footCell.getAttribute("colspan") - -1);
+
+      rows = Array.from(rows);
+      rows.shift();
+      rows.pop();
+      rows.forEach((row) => {
+        const [courseName, link] = getCourseNameAndLinkFromRow(row);
+        const coolLink = getCoolLink(row);
+        const locationAndTimePairs = getLocationAndTime(row);
+        console.debug(courseName, link, coolLink, locationAndTimePairs);
+        const urls = composeUrl(
+          firstDate,
+          weeksInSemester,
+          courseName,
+          link,
+          coolLink,
+          locationAndTimePairs,
+          calendarID
+        );
+        const newCell = document.createElement("td");
+        if (urls.length === 1) {
+          newCell.append(
+            htmlToElement(`<a target="_blank" href="${urls[0].href}">活動</a>`)
+          );
+        } else {
+          urls.forEach((url, idx) => {
+            if (idx > 0) {
+              newCell.append(document.createElement("br"));
+            }
+            newCell.append(
+              htmlToElement(
+                `<a target="_blank" href="${urls[idx].href}">活動${idx + 1}</a>`
+              )
+            );
+          });
+        }
+        row.insertBefore(newCell, row.children[row.children.length - 1]);
+      });
+    });
+  </script>
+</html>
