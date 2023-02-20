@@ -50,11 +50,14 @@
       </div>
       <div class="m-3">
         <label class="row form-label">
-          4. Log in to <a
+          4. Log in to
+          <a
             target="_blank"
             class="d-inline"
             href="https://nol.ntu.edu.tw/nol/auth.php"
-          >Online Course Information</a> and copy your planed class schedule from<a
+            >Online Course Information</a
+          >
+          and copy your planed class schedule from<a
             target="_blank"
             class="d-inline"
             href="https://nol.ntu.edu.tw/nol/coursesearch/myschedule.php"
@@ -298,16 +301,22 @@
           </tbody>
         </table>
       `);
-      const generatedTableBody = generatedTable.getElementsByTagName("tbody")[0];
+      const generatedTableBody =
+        generatedTable.getElementsByTagName("tbody")[0];
 
       rows = Array.from(rows);
-      rows.shift(); // remove header
-      rows.pop(); // remove footer
       rows.forEach((row) => {
-        const [courseName, link] = getCourseNameAndLinkFromRow(row);
-        const coolLink = getCoolLink(row);
-        const locationAndTimePairs = getLocationAndTime(row);
+        try {
+          var [courseName, link] = getCourseNameAndLinkFromRow(row);
+          var coolLink = getCoolLink(row);
+          var locationAndTimePairs = getLocationAndTime(row);
+        } catch (e) {
+          console.debug(row);
+          console.debug(e);
+          return;
+        }
         console.debug(courseName, link, coolLink, locationAndTimePairs);
+
         const urls = composeUrl(
           firstDate,
           weeksInSemester,
@@ -325,7 +334,7 @@
         rowElement.append(courseNameCell);
 
         const timeCell = document.createElement("td");
-        const groupedByDay = locationAndTimePairs.map(p => {
+        const groupedByDay = locationAndTimePairs.map((p) => {
           const weekDay = p[0];
           const classNo = p[1].join(",");
           return `${weekDay} ${classNo}`;
@@ -334,7 +343,9 @@
         rowElement.append(timeCell);
 
         const locationCell = document.createElement("td");
-        locationCell.innerText = [...new Set(locationAndTimePairs.map(p => p[2]))].join(", ");
+        locationCell.innerText = [
+          ...new Set(locationAndTimePairs.map((p) => p[2])),
+        ].join(", ");
         rowElement.append(locationCell);
 
         const eventCell = document.createElement("td");
@@ -349,7 +360,9 @@
             }
             eventCell.append(
               htmlToElement(
-                `<a target="_blank" href="${urls[idx].href}">Event ${idx + 1}</a>`
+                `<a target="_blank" href="${urls[idx].href}">Event ${
+                  idx + 1
+                }</a>`
               )
             );
           });
