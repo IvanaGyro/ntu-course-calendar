@@ -1,17 +1,17 @@
 NTU Course Calendar
 ===
 
-NTU Course Calendar is a tool to generate the events links of Googel Calendar for NTU courses. The attributes set in the event are:
+NTU Course Calendar is a tool that generates links for Google Calendar events based on the NTU course plan. The tool includes the following attributes in each event:
 
-- course name
-- time
-- classroom location
-- link of course information
-- link of NTU COOL
+- Course name
+- Time
+- Classroom location
+- Link to course information
+- Link to NTU COOL
 
-The end of an event depends on the assigned weeks of the course.
+The end date of each event is determined by the number of weeks assigned to the course.
 
 Design Philosophy
 ---
 
-**To not collect any user data**, this tool is designed as a static web page.
+To prioritize user privacy, this tool is designed as a static web page that **does not collect any user data**.
