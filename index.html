@@ -12,64 +12,67 @@
   <body style="background-color: mediumspringgreen">
     <div class="container-lg bg-white p-3">
       <h1 class="text-center">Add NTU courses to Google Calendar</h1>
-      <div class="m-3">
-        <label for="first-date" class="row form-label"
-          >1. Select the first date of the semester.</label
-        >
-        <input
-          class="form-control"
-          type="date"
-          id="first-date"
-          name="first-date"
-          value="2023-02-20"
-        />
-      </div>
-      <div class="m-3">
-        <label for="weeks" class="row form-label"
-          >2. Input the number of weeks in the semester.</label
-        >
-        <input
-          class="form-control"
-          type="number"
-          id="weeks"
-          name="weeks"
-          value="16"
-        />
-      </div>
-      <div class="m-3">
-        <label for="calendar-id" class="row form-label">
-          3. If you don't want to add the events into th default calendar, input
-          the calendar ID (optional).
-        </label>
-        <input
-          class="form-control"
-          type="text"
-          id="calendar-id"
-          name="calendar-id"
-          value=""
-        />
-      </div>
-      <div class="m-3">
-        <label class="row form-label">
-          4. Log in to
-          <a
-            target="_blank"
-            class="d-inline"
-            href="https://nol.ntu.edu.tw/nol/auth.php"
-            >Online Course Information</a
+      <ol type="1">
+        <li class="m-3">
+          <label for="first-date" class="form-label align-top"
+            >Select the first date of the semester.</label
           >
-          and copy your planed class schedule from<a
-            target="_blank"
-            class="d-inline"
-            href="https://nol.ntu.edu.tw/nol/coursesearch/myschedule.php"
-            >NTU online course</a
+          <input
+            class="form-control"
+            type="date"
+            id="first-date"
+            name="first-date"
+            value="2023-02-20"
+          />
+        </li>
+        <li class="m-3">
+          <label for="weeks" class="form-label align-top"
+            >Input the number of weeks in the semester.</label
           >
-          to the text area below.
-        </label>
+          <input
+            class="form-control"
+            type="number"
+            id="weeks"
+            name="weeks"
+            value="16"
+          />
+        </li>
+        <li class="m-3">
+          <label for="calendar-id" class="form-label align-top">
+            If you don't want to add the events into th default calendar, input
+            the calendar ID (optional).
+          </label>
+          <input
+            class="form-control"
+            type="text"
+            id="calendar-id"
+            name="calendar-id"
+            value=""
+          />
+        </li>
+        <li class="m-3">
+          <label class="form-label align-top">
+            Log in to
+            <a
+              target="_blank"
+              class="p-0"
+              href="https://nol.ntu.edu.tw/nol/auth.php"
+              >Online Course Information</a
+            >
+            and copy your planed class schedule from
+            <a
+              target="_blank"
+              class="p-0"
+              href="https://nol.ntu.edu.tw/nol/coursesearch/myschedule.php"
+              >NTU online course</a
+            >
+            to the text area below.
+          </label>
 
-        <textarea class="rich form-control" rows="10"></textarea>
-      </div>
-      <div>Find the links at the right of your class schedule.</div>
+          <textarea class="rich form-control" rows="10"></textarea>
+        </li>
+        <li>Find the links at the right of your class schedule.</li>
+      </ol>
       <div class="m-3" id="schedule"></div>
     </div>
   </body>
