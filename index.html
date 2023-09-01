@@ -101,7 +101,7 @@
       const url = new URL(courseNameElm.href);
       const keys = Array.from(url.searchParams.keys());
       keys.forEach((key) => {
-        if (!["course_id", "semester", "lang"].includes(key)) {
+        if (!["course_id", "semester", "lang", "class"].includes(key)) {
           url.searchParams.delete(key);
         }
       });
